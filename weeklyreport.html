@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
+    </head>
+    <body>
+        <textarea id="source" style="display: block; width: 100%; height: 200px"></textarea>
+        <button style="display: block; width: 100%" onclick='document.getElementById("result").innerHTML = generateWeeklyReport(document.getElementById("source").value)'>Make</button>
+
+        <div id="result"></div>
+    </body>
+</html>
+
+<script type="text/javascript">
+    var regex = /^([^\t]+)(\t(?!")[^\t\n]*|\t(?=").*?(?<!")")+$/gms;
+
+    function fixContent(body) {
+        body = body.replace(/[\s-‒]+/g, "");
+        if (body.endsWith("。") === false) {
+            body = body + "。";
+        }
+
+        const urlRegex = /(https?:\/\/[a-z\/0-9%?=-_.]+)/ig;
+        body = body.replaceAll(urlRegex, function (url) {
+            return '<a target="_blank" href="' + url + '">' + url + "</a>";
+        });
+        return body
+    }
+
+    // the real function
+    function generateWeeklyReport(str) {
+        let lastFirstC = (lastSecondC = lastThirdC = "");
+        let html = "";
+
+        ret = Papa.parse(str.trim());
+        for (row in ret.data) {
+            let value = ret.data[row];
+            if (value.length < 4) {
+                continue;
+            }
+
+            firstC = value[0].trim();
+            secondC = value[1].trim().replace(/^[0-9]+/, "");
+            thirdC = value[2].trim();
+            forthC = value[3].trim().split("\n");
+
+            if (firstC != lastFirstC) {
+                if (html != "") {
+                    html = html + "</ul>";
+                }
+
+                html = html + "<br /><p style='color:#BF40BF;'><b>【 ■ " + firstC + "】</b></p><ul>\n";
+            }
+
+            html = html + "<li><b style='color:#973544'>" + secondC + " > </b><span style='color:#973544'>" + thirdC + "：</span>";
+
+            if (forthC.length == 1) {
+                forthCContent = fixContent(forthC[0]);
+                html = html + forthCContent + "</li>\n";
+            } else {
+                html = html + "<ul>";
+                for (i = 0; i < forthC.length; i++) {
+                    forthCContent = fixContent(forthC[i]);
+                    html = html + "<li>" + forthCContent + "</li>\n";
+                }
+                html = html + "</ul></li>";
+            }
+
+            lastFirstC = firstC;
+            lastSecondC = secondC;
+        }
+
+        return html;
+    }
+</script>
