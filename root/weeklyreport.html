@@ -16,13 +16,23 @@
 <script type="text/javascript">
     var regex = /^([^\t]+)(\t(?!")[^\t\n]*|\t(?=").*?(?<!")")+$/gms;
 
+    const str = `
+`;
+
+    document.getElementById("source").value = str;
+
     function fixContent(body) {
+
+        if(body == "") {
+            return "本周无重要进度更新"
+        }
+
         body = body.replace(/[\s-‒]+/g, "");
         if (body.endsWith("。") === false) {
             body = body + "。";
         }
 
-        const urlRegex = /(https?:\/\/[a-z\/0-9%?=-_.]+)/ig;
+        const urlRegex = /(https?:\/\/[a-z\/0-9%&?=-_.]+)/ig;
         body = body.replaceAll(urlRegex, function (url) {
             return '<a target="_blank" href="' + url + '">' + url + "</a>";
         });
@@ -31,47 +41,68 @@
 
     // the real function
     function generateWeeklyReport(str) {
-        let lastFirstC = (lastSecondC = lastThirdC = "");
-        let html = "";
+        let html = ""
+        let markedHtml = ""
+
+        let lastProjectName = ""
+        let lastProductName = ""
+        let lastServiceName = ""
+        let lastProjectType = ""
+        let lastIsMarked = false
+        let lastWeeklyDetails = ""
 
         ret = Papa.parse(str.trim());
+
         for (row in ret.data) {
             let value = ret.data[row];
-            if (value.length < 4) {
+            if (value.length < 5) {
                 continue;
             }
 
-            firstC = value[0].trim();
-            secondC = value[1].trim().replace(/^[0-9]+/, "");
-            thirdC = value[2].trim();
-            forthC = value[3].trim().split("\n");
+            projectName = value[0].trim()
+            productName = value[1].trim()
+            projectType = value[2].trim()
+            isMarked    = value[3].trim().toLowerCase() == "true"
+            weeklyDetails = value[4].trim().split("\n");
 
-            if (firstC != lastFirstC) {
+            if (productName != lastProductName) {
                 if (html != "") {
-                    html = html + "</ul>";
+                    html = html + "</ul><br />";
                 }
 
-                html = html + "<br /><p style='color:#BF40BF;'><b>【 ■ " + firstC + "】</b></p><ul>\n";
+                html = html + "<p><b>【 ■ " + productName + "】</b></p><ul>\n";
             }
+            lastProductName = productName
 
-            html = html + "<li><b style='color:#973544'>" + secondC + " > </b><span style='color:#973544'>" + thirdC + "：</span>";
+            html = html + "<li><b>" + projectType + " > </b><span>" + projectName + "：</span>";
 
-            if (forthC.length == 1) {
-                forthCContent = fixContent(forthC[0]);
-                html = html + forthCContent + "</li>\n";
+            if (weeklyDetails.length == 1) {
+                let content = fixContent(weeklyDetails[0]);
+                html = html + content + "</li>\n";
+                
+                if (isMarked) {
+                    markedHtml = markedHtml + `<li><b>${productName} ></b> ${projectName}: ${content}</li>`
+                }
+
             } else {
                 html = html + "<ul>";
-                for (i = 0; i < forthC.length; i++) {
-                    forthCContent = fixContent(forthC[i]);
-                    html = html + "<li>" + forthCContent + "</li>\n";
+                let segment = ""
+                for (i = 0; i < weeklyDetails.length; i++) {
+                    let content = fixContent(weeklyDetails[i]);
+                    segment = segment + "<li>" + content + "</li>\n";
                 }
-                html = html + "</ul></li>";
+                html = html + segment + "</ul></li>";
+                
+                if (isMarked) {
+                    
+                    markedHtml = markedHtml + `<li><b>${productName} ></b> ${projectName}: <ul>${segment}</ul></li>`
+                }
             }
-
-            lastFirstC = firstC;
-            lastSecondC = secondC;
         }
 
-        return html;
+        return `
+        <p><b>【 ■ 重点事项】</b></p><ul>${markedHtml}</ul> 
+        <br /><br />
+        <p><b>==以下为详细内容==</b></p> ${html}`;
     }
 </script>
